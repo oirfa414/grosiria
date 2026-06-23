@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grosiria.id - Eceran Harga Grosir Impor</title>
+    <!-- Tailwind CSS untuk Desain Ringan, Cepat & Responsif -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Font Profesional, Bersih, dan Mudah Dibaca -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Memasang Library Supabase agar Web Bisa Konek Internet -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="bg-emerald-600 text-white sticky top-0 z-50 shadow-md px-4 py-3">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">Grosir<span class="text-amber-300">ia</span>.id</h1>
+                <p class="text-xs text-emerald-100 font-medium">Beli Satuan, Tetap Harga Grosir! (Live Database)</p>
+            </div>
+            <!-- Tombol Kelola Barang untuk Admin -->
+            <button onclick="toggleAdminPanel()" class="bg-emerald-700 hover:bg-emerald-800 text-amber-300 font-semibold text-xs py-2 px-3 rounded-lg border border-emerald-500 transition-all cursor-pointer">
+                ⚙️ Kelola Barang (Admin)
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-6">
+        
+        <!-- BANNER EDUKASI WARGA KAMPUNG (SUDAH DIPERBAIKI) -->
+        <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl mb-6 shadow-xs">
+            <h3 class="text-amber-800 font-bold text-sm mb-1">📢 Cara Belanja Mudah di Grosiria:</h3>
+            <p class="text-xs text-amber-700 leading-relaxed">Pilih barang ➔ Pilih cara ambil (Transfer atau Jemput Sendiri) ➔ Klik tombol WhatsApp. Praktis, tidak ribet!</p>
+        </div>
+
+        <!-- PANEL ADMIN: UNTUK UPLOAD FOTO & DESKRIPSI -->
+        <section id="admin-panel" class="hidden bg-white border border-gray-200 rounded-2xl p-5 mb-8 shadow-sm">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
+                <h2 class="text-lg font-bold text-gray-700 flex items-center gap-2">🛠️ Dashboard Admin: Tambah Barang</h2>
+                <button onclick="toggleAdminPanel()" class="text-gray-400 hover:text-gray-600 text-sm cursor-pointer">Tutup [X]</button>
+            </div>
+            
+            <form id="product-form" onsubmit="saveProduct(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Barang / Produk Impor</label>
+                    <input type="text" id="prod-name" placeholder="Contoh: Senter Swat Super Terang" class="w-full text-sm border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Harga Grosir (Bisa Beli Satuan)</label>
+                        <input type="number" id="prod-price" placeholder="Contoh: 15000" class="w-full text-sm border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Link Foto Barang</label>
+                        <input type="url" id="prod-img" placeholder="https://link-foto.com/gambar.jpg" class="w-full text-sm border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Deskripsi & Keterangan Barang</label>
+                    <textarea id="prod-desc" rows="3" placeholder="Jelaskan ukuran, warna, dll..." class="w-full text-sm border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required></textarea>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-lg transition-all cursor-pointer shadow-md">
+                    🚀 Pasang & Sinkronkan ke HP Warga
+                </button>
+            </form>
+        </section>
+
+        <!-- KATALOG PRODUK -->
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">📦 Produk Grosir Pilihan Hari Ini</h2>
+        <div id="product-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <p class="text-center text-gray-400 col-span-2 py-8">Sedang mengambil data dari database pusat...</p>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-gray-800 text-gray-400 text-center py-6 mt-12 text-xs border-t border-gray-700">
+        <p>© 2026 Grosiria.id. Terhubung Aman ke Cloud Database.</p>
+    </footer>
+
+    <!-- LOGIK JAVASCRIPT & SUPABASE -->
+    <script>
+        // === ATURAN KONFIGURASI SUDAH DISESUAIKAN ===
+        const NOMOR_WHATSAPP = "6281260535764"; 
+        const SUPABASE_URL = "https://zelgqokhzyskteascosy.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_uJk9-JNumCu1Kashhhx1LQ_Rj9lY7NM"; 
+
+        // Inisialisasi Koneksi Supabase
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function toggleAdminPanel() {
+            const panel = document.getElementById('admin-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        // Ambil Data dari Database Online (Supabase)
+        async function fetchProducts() {
+            const container = document.getElementById('product-container');
+            
+            const { data, error } = await _supabase
+                .from('produk')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (error) {
+                container.innerHTML = `<p class="text-center text-red-500 col-span-2 py-8">Gagal konek database: ${error.message}</p>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-400 col-span-2 py-8">Katalog kosong. Klik menu admin untuk tambah barang pertama Anda!</p>`;
+                return;
+            }
+
+            container.innerHTML = ""; 
+            data.forEach(product => {
+                const isHabis = product.status === "Habis";
+                const card = document.createElement('div');
+                card.className = `bg-white border ${isHabis ? 'border-gray-200 opacity-65' : 'border-gray-100'} rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between relative`;
+                
+                card.innerHTML = `
+                    <div>
+                        <span class="absolute top-3 left-3 z-10 text-[10px] font-bold px-2 py-0.5 rounded shadow-xs ${isHabis ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}">
+                            ${product.status.toUpperCase()}
+                        </span>
+                        
+                        <img src="${product.img}" alt="${product.name}" class="w-full h-48 object-cover bg-gray-100 grayscale-${isHabis ? '1' : '0'}" onerror="this.src='https://placehold.co/600x400?text=Foto+Grosiria'">
+                        
+                        <div class="p-4">
+                            <h3 class="font-bold text-base ${isHabis ? 'text-gray-400 line-through' : 'text-gray-800'} line-clamp-1 mb-1">${product.name}</h3>
+                            <div class="flex items-baseline gap-1.5 mb-2">
+                                <span class="text-emerald-600 font-bold text-lg">Rp ${Number(product.price).toLocaleString('id-ID')}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 line-clamp-3 leading-relaxed">${product.desc}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 pt-0 border-t border-gray-50 mt-2 space-y-3">
+                        ${!isHabis ? `
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pilihan Pengambilan:</label>
+                            <select id="method-${product.id}" class="w-full text-xs border border-gray-200 rounded-md p-1.5 bg-gray-50 font-medium">
+                                <option value="JEMPUT KE TEMPAT">🏃 Ambil Sendiri ke Gudang (Bayar Tunai/TF)</option>
+                                <option value="TRANSFER (KIRIM)">📦 Transfer Bank / E-Wallet (Kirim ke Rumah)</option>
+                            </select>
+                        </div>
+                        <button onclick="orderViaWhatsApp('${product.name}', ${product.price}, '${product.id}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer">
+                            Pesan via WhatsApp
+                        </button>
+                        ` : `
+                        <div class="bg-gray-100 text-center py-3 rounded-xl text-xs font-bold text-gray-400">
+                            ❌ Sementara Stok Habis
+                        </div>
+                        `}
+                        
+                        <!-- Panel Kontrol Khusus Admin -->
+                        <div class="pt-2 border-t border-dashed border-gray-100 flex justify-between items-center text-[10px]">
+                            <button onclick="toggleStock('${product.id}', '${product.status}')" class="text-amber-600 hover:text-amber-700 font-semibold cursor-pointer">
+                                🔄 Ubah Jadi ${isHabis ? 'Tersedia' : 'Habis'}
+                            </button>
+                            <button onclick="deleteProduct('${product.id}')" class="text-red-400 hover:text-red-600 cursor-pointer">
+                                🗑️ Hapus Barang
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Fungsi Simpan ke Database Supabase Online
+        async function saveProduct(event) {
+            event.preventDefault(); 
+
+            const name = document.getElementById('prod-name').value;
+            const price = document.getElementById('prod-price').value;
+            const img = document.getElementById('prod-img').value;
+            const desc = document.getElementById('prod-desc').value;
+
+            const { error } = await _supabase
+                .from('produk')
+                .insert([{ name, price, img, desc, status: 'Tersedia' }]);
+
+            if (error) {
+                alert("Gagal menyimpan: " + error.message);
+            } else {
+                alert("Sukses! Produk Anda sudah sinkron ke seluruh HP warga kampung.");
+                document.getElementById('product-form').reset(); 
+                toggleAdminPanel(); 
+                fetchProducts(); 
+            }
+        }
+
+        // Fitur Ganti Status Stok Online
+        async function toggleStock(id, currentStatus) {
+            const nextStatus = currentStatus === "Tersedia" ? "Habis" : "Tersedia";
+            const { error } = await _supabase
+                .from('produk')
+                .update({ status: nextStatus })
+                .eq('id', id);
+
+            if (error) alert("Gagal mengubah status stok: " + error.message);
+            else fetchProducts();
+        }
+
+        // Fitur Hapus dari Database Online
+        async function deleteProduct(id) {
+            if(confirm("Hapus barang ini dari database online? Semua HP warga juga akan terhapus.")) {
+                const { error } = await _supabase
+                    .from('produk')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) alert("Gagal menghapus: " + error.message);
+                else fetchProducts();
+            }
+        }
+
+        // Alur Otomatis Kirim WhatsApp
+        function orderViaWhatsApp(name, price, id) {
+            const methodSelect = document.getElementById(`method-${id}`);
+            const metodeDipilih = methodSelect ? methodSelect.value : "JEMPUT KE TEMPAT";
+
+            const teksPesan = 
+`Halo Admin Grosiria.id, saya mau order barang harga grosir satuan ini:
+
+*Nama Produk:* ${name}
+*Harga Satuan:* Rp ${Number(price).toLocaleString('id-ID')}
+*Metode Ambil:* ${metodeDipilih}
+
+*Nama Saya:* 
+*Alamat/Patokan:* 
+
+Mohon dibantu infonya ya Min, terima kasih!`;
+
+            const urlWhatsApp = `https://api.whatsapp.com/send?phone=${NOMOR_WHATSAPP}&text=${encodeURIComponent(teksPesan)}`;
+            window.open(urlWhatsApp, '_blank');
+        }
+
+        // Load data pertama kali saat halaman diakses
+        fetchProducts();
+    </script>
+</body>
+</html>
