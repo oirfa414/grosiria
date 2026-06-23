@@ -32,7 +32,7 @@
 
     <main class="max-w-4xl mx-auto px-4 py-6">
         
-        <!-- BANNER EDUKASI WARGA KAMPUNG (SUDAH DIPERBAIKI) -->
+        <!-- BANNER EDUKASI WARGA KAMPUNG -->
         <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl mb-6 shadow-xs">
             <h3 class="text-amber-800 font-bold text-sm mb-1">📢 Cara Belanja Mudah di Grosiria:</h3>
             <p class="text-xs text-amber-700 leading-relaxed">Pilih barang ➔ Pilih cara ambil (Transfer atau Jemput Sendiri) ➔ Klik tombol WhatsApp. Praktis, tidak ribet!</p>
@@ -42,7 +42,7 @@
         <section id="admin-panel" class="hidden bg-white border border-gray-200 rounded-2xl p-5 mb-8 shadow-sm">
             <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
                 <h2 class="text-lg font-bold text-gray-700 flex items-center gap-2">🛠️ Dashboard Admin: Tambah Barang</h2>
-                <button onclick="toggleAdminPanel()" class="text-gray-400 hover:text-gray-600 text-sm cursor-pointer">Tutup [X]</button>
+                <button onclick="closeAdminPanel()" class="text-gray-400 hover:text-gray-600 text-sm cursor-pointer">Tutup [X]</button>
             </div>
             
             <form id="product-form" onsubmit="saveProduct(event)" class="space-y-4">
@@ -85,17 +85,37 @@
 
     <!-- LOGIK JAVASCRIPT & SUPABASE -->
     <script>
-        // === ATURAN KONFIGURASI SUDAH DISESUAIKAN ===
+        // === ATURAN KONFIGURASI ===
         const NOMOR_WHATSAPP = "6281260535764"; 
         const SUPABASE_URL = "https://zelgqokhzyskteascosy.supabase.co"; 
+        
+        // Gantilah teks di bawah ini dengan kode 'Publishable key' Supabase Anda yang diawali 'sb_publishable_...'
         const SUPABASE_KEY = "sb_publishable_uJk9-JNumCu1Kashhhx1LQ_Rj9lY7NM"; 
+
+        // KATA SANDI RAHASIA ADMIN (Silakan ganti kata 'grosiria123' dengan sandi pilihan Anda sendiri)
+        const PASSWORD_ADMIN = "grosiria123"; 
 
         // Inisialisasi Koneksi Supabase
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Fungsi dengan sistem Password Pengaman
         function toggleAdminPanel() {
             const panel = document.getElementById('admin-panel');
-            panel.classList.toggle('hidden');
+            
+            if (panel.classList.contains('hidden')) {
+                const inputSandi = prompt("Masukkan Kata Sandi Rahasia Admin:");
+                if (inputSandi === PASSWORD_ADMIN) {
+                    panel.classList.remove('hidden');
+                } else if (inputSandi !== null) {
+                    alert("❌ Kata sandi salah! Anda tidak memiliki akses admin.");
+                }
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        function closeAdminPanel() {
+            document.getElementById('admin-panel').add('hidden');
         }
 
         // Ambil Data dari Database Online (Supabase)
@@ -158,12 +178,12 @@
                         </div>
                         `}
                         
-                        <!-- Panel Kontrol Khusus Admin -->
+                        <!-- Panel Kontrol Khusus Admin (Akan Meminta Sandi Juga Jika Di-klik) -->
                         <div class="pt-2 border-t border-dashed border-gray-100 flex justify-between items-center text-[10px]">
-                            <button onclick="toggleStock('${product.id}', '${product.status}')" class="text-amber-600 hover:text-amber-700 font-semibold cursor-pointer">
+                            <button onclick="toggleStockSecure('${product.id}', '${product.status}')" class="text-amber-600 hover:text-amber-700 font-semibold cursor-pointer">
                                 🔄 Ubah Jadi ${isHabis ? 'Tersedia' : 'Habis'}
                             </button>
-                            <button onclick="deleteProduct('${product.id}')" class="text-red-400 hover:text-red-600 cursor-pointer">
+                            <button onclick="deleteProductSecure('${product.id}')" class="text-red-400 hover:text-red-600 cursor-pointer">
                                 🗑️ Hapus Barang
                             </button>
                         </div>
@@ -196,8 +216,14 @@
             }
         }
 
-        // Fitur Ganti Status Stok Online
-        async function toggleStock(id, currentStatus) {
+        // Fitur Ganti Status Stok Online Aman
+        async function toggleStockSecure(id, currentStatus) {
+            const inputSandi = prompt("Masukkan Kata Sandi Admin untuk Ubah Stok:");
+            if (inputSandi !== PASSWORD_ADMIN) {
+                alert("❌ Akses ditolak.");
+                return;
+            }
+            
             const nextStatus = currentStatus === "Tersedia" ? "Habis" : "Tersedia";
             const { error } = await _supabase
                 .from('produk')
@@ -208,8 +234,14 @@
             else fetchProducts();
         }
 
-        // Fitur Hapus dari Database Online
-        async function deleteProduct(id) {
+        // Fitur Hapus dari Database Online Aman
+        async function deleteProductSecure(id) {
+            const inputSandi = prompt("Masukkan Kata Sandi Admin untuk Menghapus:");
+            if (inputSandi !== PASSWORD_ADMIN) {
+                alert("❌ Akses ditolak.");
+                return;
+            }
+
             if(confirm("Hapus barang ini dari database online? Semua HP warga juga akan terhapus.")) {
                 const { error } = await _supabase
                     .from('produk')
